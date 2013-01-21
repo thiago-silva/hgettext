@@ -36,14 +36,19 @@ def writeOutput(matches, outputfileName):
     outputfile = file(outputfileName, "w")
     outputfile.write(header)
     outputfile.write("\n\n")
+
+    #to avoid duplicates
+    allMatches = []
     
     for fileAndMatches in matches:
         filename = fileAndMatches[0]
         fileMatches = fileAndMatches[1]
         for match in fileMatches: 
-            outputfile.write("#: "+filename+":0\n")
-            outputfile.write('msgid "'+match+'"\n')
-            outputfile.write('msgstr ""\n\n')
+            if (match not in allMatches):
+                outputfile.write("#: "+filename+":0\n")
+                outputfile.write('msgid "'+match+'"\n')
+                outputfile.write('msgstr ""\n\n')
+                allMatches.append(match)
     outputfile.flush()
     outputfile.close()
 

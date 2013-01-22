@@ -1,6 +1,28 @@
 #!/usr/bin/python
+from pymeta.grammar import OMeta2Grammar, OMetaBase
+from pymeta.builder import TreeBuilder, moduleFromGrammar
+import json
+import pprint
+class OMeta():
+    def __init__(self, key):
+        gkey = ''.join(["'" + x + "'" for x in list(key)])
 
-import re
+        grammar = r"""
+start = (gettext:x | anything -> None)+:xs -> [x for x in xs if x != None]
+gettext = '(' gettext_key space+ string:s ')' -> s
+string  = space* '"' ('\\' '"' | ~'"' :x)*:xs '"' -> ''.join(xs)
+gettext_key = """+gkey+"""
+space = anything:c ?(c.isspace())  -> c
+"""
+        G = OMeta2Grammar(grammar)
+        tree = G.parseGrammar('evaluator', TreeBuilder)
+        self.Parser = moduleFromGrammar(tree, 'evaluator', OMetaBase, {})
+
+    def parse(self, code):
+        parser = self.Parser(code)
+        res = parser.apply("start")[0]
+        #pprint.pprint(res)
+        return res
 
 header = "\n".join(["# Translation file",
                                "",
@@ -25,7 +47,10 @@ def getMatches(filename, keyword):
     inputfile.close()
     fulltext = "".join(lines)
     # when not using U (universal newline support), search for keyword+" \r?\n?.*\"(.*)\""
-    matches = re.findall(keyword+" \n?.*\"(.*)\"", fulltext)
+    o = OMeta("__")
+    matches = [json.dumps(s) for s in o.parse(fulltext)]
+
+    #print filename + " matched: " + str(len(matches))
 #    print fulltext
 
 #    print str(len(matches))
@@ -46,7 +71,7 @@ def writeOutput(matches, outputfileName):
         for match in fileMatches: 
             if (match not in allMatches):
                 outputfile.write("#: "+filename+":0\n")
-                outputfile.write('msgid "'+match+'"\n')
+                outputfile.write('msgid '+match+'\n')
                 outputfile.write('msgstr ""\n\n')
                 allMatches.append(match)
     outputfile.flush()
